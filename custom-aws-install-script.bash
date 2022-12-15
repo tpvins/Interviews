@@ -16,13 +16,13 @@ fi
 
 AWS_CLI_VERSION=$(aws --version 2>&1)
 if [ $? -eq 0 ]; then
-    echo "---------------------------------------------------------------------AWS CLI is installed tryng to upgrade if its outdated......."
+    echo "AWS CLI is installed tryng to upgrade if its outdated......."
     ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 else
-    echo "---------------------------------------------------------------------Did not found AWS CLI installation. Trying to Install............."
+    echo "Did not found AWS CLI installation. Trying to Install............."
     unzip awscliv2.zip
     ./aws/install
-    echo "---------------------------------------------------------------------AWS CLI Installed---------------------------------------------------------------------"
+    echo "AWS CLI Installed....................."
 fi
 
 # Reading user params
@@ -40,12 +40,49 @@ else
 	exit 100
 fi
 
-STATIC_DOMAIN="vins.com"
-read -p "Enter first subdomain: " USER_PROMPT_SUBDOMAIN_1
-read -p "Enter last subdomain: " USER_PROMPT_SUBDOMAIN_2
+echo "Started creating Record configs ........................"
 
-SUBDOMAIN_1="${USER_PROMPT_SUBDOMAIN_1}.${STATIC_DOMAIN}"
-SUBDOMAIN_2="${USER_PROMPT_SUBDOMAIN_2}.${STATIC_DOMAIN}"
+STATIC_DOMAIN="sample.com"
+ALB_NM="dualstack.sample-9xxxx.us-east-2.elb.amazonaws.com."
+REC_TYP="A"
+# Refer to: https://docs.aws.amazon.com/general/latest/gr/elb.html)
+HostedZoneId="xxxx"
+ROUTE53_HostedZoneId="xxxxxxx"
+TMP_DIR="$(pwd)/rec_temp"
+rm -rf "${TMP_DIR}"
+mkdir -p "${TMP_DIR}"
 
-echo "Sub domain 1st is : "$SUBDOMAIN_1
-echo "Sub domain 2nd is : "$SUBDOMAIN_2
+for SUB_DOMAIN in "$@"
+do
+
+        NEW_DOMAIN="${SUB_DOMAIN}.${STATIC_DOMAIN}"
+        echo "Your domain will be : "$NEW_DOMAIN
+	cat > "${TMP_DIR}/${SUB_DOMAIN}.json" <<- EOM
+	{
+	    "Comment": "Creating Alias resource record sets in Route 53(Automated)",
+ 	    "Changes": [{
+        	"Action": "CREATE",
+        	"ResourceRecordSet": {
+            		"Name": "${NEW_DOMAIN}",
+            		"Type": "${REC_TYP}",
+            		"AliasTarget": {
+                		"HostedZoneId": "${HostedZoneId}",
+                		"DNSName": "${ALB_NM}",
+                		"EvaluateTargetHealth": false
+            		}
+       	    	}
+    	    }]
+	}
+	EOM
+
+done
+
+echo "Completed Record configs ........................"
+
+echo "Creating Records in AWS ........................."
+for SUB_DOMAIN in "$@"
+do
+	NEW_DOMAIN="${SUB_DOMAIN}.${STATIC_DOMAIN}.json"
+	aws route53 change-resource-record-sets --hosted-zone-id "${ROUTE53_HostedZoneId}" --change-batch "file://${TMP_DIR}/NEW_DOMAIN"
+done
+echo "Records added"
