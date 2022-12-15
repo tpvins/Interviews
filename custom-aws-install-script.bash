@@ -39,3 +39,13 @@ else
 	echo "Invalid account credentials"
 	exit 100
 fi
+
+STATIC_DOMAIN="vins.com"
+read -p "Enter first subdomain: " USER_PROMPT_SUBDOMAIN_1
+read -p "Enter last subdomain: " USER_PROMPT_SUBDOMAIN_2
+
+SUBDOMAIN_1="${USER_PROMPT_SUBDOMAIN_1}.${STATIC_DOMAIN}"
+SUBDOMAIN_2="${USER_PROMPT_SUBDOMAIN_2}.${STATIC_DOMAIN}"
+
+echo "Sub domain 1st is : "$SUBDOMAIN_1
+echo "Sub domain 2nd is : "$SUBDOMAIN_2
